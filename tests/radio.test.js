@@ -9,6 +9,11 @@ import {
   parseStompFrame,
   wrapSockJsFrame,
 } from "../radio.js";
+import {
+  createVisualizerLevels,
+  getPlaybackVisualState,
+  getVisualizerBarCount,
+} from "../ui-state.js";
 
 test("parseSockJsPayload extracts STOMP frames from SockJS arrays", () => {
   const payload = 'a["CONNECTED\\nversion:1.2\\nheart-beat:0,0\\n\\n\\u0000"]';
@@ -66,5 +71,44 @@ test("buildConnectFrame and buildSubscribeFrame produce STOMP payloads", () => {
   assert.equal(
     wrapSockJsFrame(buildSubscribeFrame("/topic/radios/wcd/tracks", "sub-0")),
     '["SUBSCRIBE\\nid:sub-0\\ndestination:/topic/radios/wcd/tracks\\n\\n\\u0000"]',
+  );
+});
+
+test("getPlaybackVisualState enables animation only while audio is playing", () => {
+  assert.deepEqual(getPlaybackVisualState(true), {
+    buttonLabel: "Play",
+    isAnimating: false,
+  });
+
+  assert.deepEqual(getPlaybackVisualState(false), {
+    buttonLabel: "Pause",
+    isAnimating: true,
+  });
+});
+
+test("getVisualizerBarCount scales bars to fill the available width", () => {
+  assert.equal(getVisualizerBarCount(0), 12);
+  assert.equal(getVisualizerBarCount(120), 13);
+  assert.equal(getVisualizerBarCount(216), 24);
+});
+
+test("createVisualizerLevels boosts mirrored bar heights for punchier motion", () => {
+  assert.deepEqual(createVisualizerLevels([], 3), [0.14, 0.14, 0.14]);
+
+  assert.deepEqual(
+    createVisualizerLevels([255, 0, 0, 0], 4),
+    [0.31, 0.83, 0.83, 0.31],
+  );
+
+  assert.deepEqual(
+    createVisualizerLevels([128, 0, 0, 0], 4),
+    [0.25, 0.6, 0.6, 0.25],
+  );
+});
+
+test("createVisualizerLevels spreads a dominant center peak across neighbors", () => {
+  assert.deepEqual(
+    createVisualizerLevels([255, 0, 0, 0], 5),
+    [0.14, 0.31, 0.66, 0.31, 0.14],
   );
 });

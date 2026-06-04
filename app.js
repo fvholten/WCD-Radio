@@ -10,9 +10,17 @@ import {
   parseStompFrame,
   wrapSockJsFrame,
 } from "./radio.js";
+import {
+  createVisualizerLevels,
+  getPlaybackVisualState,
+  getVisualizerBarCount,
+} from "./ui-state.js";
 
 const audio = document.querySelector("#stream");
 const playToggle = document.querySelector("#play-toggle");
+const player = document.querySelector(".player");
+const visualizer = document.querySelector(".music-visualizer");
+const trackCard = document.querySelector(".track-card");
 const volumeControl = document.querySelector("#volume");
 const trackTitle = document.querySelector("#track-title");
 const trackArtist = document.querySelector("#track-artist");
@@ -26,9 +34,109 @@ audio.volume = Number(volumeControl.value) / 100;
 
 let socket;
 let reconnectTimer;
+let resizeObserver;
+let animationFrameId;
+let audioContext;
+let analyser;
+let frequencyData;
+let mediaSource;
+
+function renderVisualizerBars() {
+  const barCount = getVisualizerBarCount(trackCard.clientWidth);
+  visualizer.replaceChildren();
+
+  for (let index = 0; index < barCount; index += 1) {
+    const bar = document.createElement("span");
+    bar.className = "music-bar";
+    bar.style.setProperty("--bar-index", String(index));
+    bar.style.setProperty("--bar-level", "0.14");
+    visualizer.append(bar);
+  }
+}
+
+function applyVisualizerLevels(levels) {
+  const bars = visualizer.children;
+
+  for (let index = 0; index < bars.length; index += 1) {
+    const level = levels[index] ?? 0.14;
+    bars[index].style.setProperty(
+      "--bar-level",
+      String(level),
+    );
+    bars[index].style.setProperty(
+      "--bar-alpha",
+      String(Math.min(1, 0.32 + level * 0.95)),
+    );
+    bars[index].style.setProperty(
+      "--bar-glow",
+      `${10 + Math.round(level * 18)}px`,
+    );
+  }
+}
+
+function stopVisualizer() {
+  if (animationFrameId) {
+    window.cancelAnimationFrame(animationFrameId);
+    animationFrameId = null;
+  }
+
+  applyVisualizerLevels(
+    Array.from({ length: visualizer.childElementCount }, () => 0.14),
+  );
+}
+
+function tickVisualizer() {
+  if (!analyser || !frequencyData || audio.paused) {
+    stopVisualizer();
+    return;
+  }
+
+  analyser.getByteFrequencyData(frequencyData);
+  applyVisualizerLevels(
+    createVisualizerLevels(
+      Array.from(frequencyData),
+      visualizer.childElementCount,
+    ),
+  );
+  animationFrameId = window.requestAnimationFrame(tickVisualizer);
+}
+
+async function ensureAudioAnalysis() {
+  if (!("AudioContext" in window || "webkitAudioContext" in window)) {
+    return false;
+  }
+
+  try {
+    if (!audioContext) {
+      const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+      audio.crossOrigin = "anonymous";
+      audioContext = new AudioContextClass();
+      analyser = audioContext.createAnalyser();
+      analyser.fftSize = 256;
+      analyser.smoothingTimeConstant = 0.82;
+      mediaSource = audioContext.createMediaElementSource(audio);
+      mediaSource.connect(analyser);
+      analyser.connect(audioContext.destination);
+      frequencyData = new Uint8Array(analyser.frequencyBinCount);
+    }
+
+    if (audioContext.state === "suspended") {
+      await audioContext.resume();
+    }
+  } catch (error) {
+    console.warn("Audio visualization unavailable", error);
+    analyser = null;
+    frequencyData = null;
+    return false;
+  }
+
+  return true;
+}
 
 function updatePlayButton() {
-  playToggle.textContent = audio.paused ? "Play" : "Pause";
+  const state = getPlaybackVisualState(audio.paused);
+  playToggle.textContent = state.buttonLabel;
+  player.dataset.playing = String(state.isAnimating);
 }
 
 function setStreamStatus(message) {
@@ -61,6 +169,7 @@ async function togglePlayback() {
   }
 
   try {
+    await ensureAudioAnalysis();
     await audio.play();
   } catch {
     setStreamStatus("Playback needs a direct user click.");
@@ -138,11 +247,14 @@ volumeControl.addEventListener("input", (event) => {
 audio.addEventListener("play", () => {
   updatePlayButton();
   setStreamStatus("Playing live");
+  window.cancelAnimationFrame(animationFrameId);
+  animationFrameId = window.requestAnimationFrame(tickVisualizer);
 });
 
 audio.addEventListener("pause", () => {
   updatePlayButton();
   setStreamStatus("Paused");
+  stopVisualizer();
 });
 
 audio.addEventListener("waiting", () => {
@@ -153,7 +265,19 @@ audio.addEventListener("waiting", () => {
 
 audio.addEventListener("error", () => {
   setStreamStatus("Stream unavailable");
+  stopVisualizer();
 });
 
 updatePlayButton();
+renderVisualizerBars();
+
+if ("ResizeObserver" in window) {
+  resizeObserver = new ResizeObserver(() => {
+    renderVisualizerBars();
+  });
+  resizeObserver.observe(trackCard);
+} else {
+  window.addEventListener("resize", renderVisualizerBars);
+}
+
 connectTrackFeed();

@@ -4,7 +4,7 @@ import { fileURLToPath } from "node:url";
 
 const projectRoot = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 const outputDir = path.join(projectRoot, "dist");
-const filesToCopy = ["index.html", "app.js", "radio.js", "styles.css"];
+const filesToCopy = ["index.html", "app.js", "radio.js", "styles.css", "ui-state.js"];
 
 await rm(outputDir, { force: true, recursive: true });
 await mkdir(outputDir, { recursive: true });
