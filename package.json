@@ -3,7 +3,13 @@
   "version": "1.0.0",
   "private": true,
   "type": "module",
+  "engines": {
+    "node": "24.x"
+  },
   "scripts": {
+    "build": "node scripts/build.mjs",
+    "dev": "node server.js .",
+    "start": "node server.js dist",
     "test": "node --test"
   }
 }

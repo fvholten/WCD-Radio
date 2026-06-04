@@ -1,6 +1,6 @@
-# BCB Radio UI
+# WCD Radio UI
 
-Small static radio player for the BCB live stream. It plays the MP3 stream, connects to the live track feed over SockJS/STOMP, and shows the currently playing song with artwork when available.
+Small static radio player for the WCD live stream. It plays the MP3 stream, connects to the live track feed over SockJS/STOMP, and shows the currently playing song with artwork when available.
 
 ## Features
 
@@ -10,12 +10,18 @@ Small static radio player for the BCB live stream. It plays the MP3 stream, conn
 - Show current artwork when the feed provides it
 - Reconnect the track feed automatically if the websocket drops
 
+## Requirements
+
+- Node.js `24.x`
+- npm
+
 ## Local Development
 
-This project is just static HTML, CSS, and JavaScript. Serve it over local HTTP and open it in a browser.
+Install dependencies and start the local server with npm.
 
 ```bash
-python3 -m http.server 4173 --bind 127.0.0.1
+npm install
+npm run dev
 ```
 
 Then open:
@@ -23,6 +29,40 @@ Then open:
 ```text
 http://127.0.0.1:4173/
 ```
+
+## Build
+
+Create the static deployment output in `dist/` with:
+
+```bash
+npm run build
+```
+
+## Deployment
+
+### Vercel
+
+This repo includes [`vercel.json`](./vercel.json) with:
+
+- `buildCommand`: `npm run build`
+- `outputDirectory`: `dist`
+
+You can deploy it from the Vercel dashboard by importing the repo, or with the CLI:
+
+```bash
+vercel
+vercel --prod
+```
+
+### Railway
+
+Railway can use the npm scripts directly:
+
+- Install command: `npm install`
+- Build command: `npm run build`
+- Start command: `npm start`
+
+`npm start` runs the included Node static server, which serves `dist/` in production and respects Railway's `PORT` environment variable.
 
 ## Testing
 
@@ -45,6 +85,8 @@ The websocket handshake details are captured in [`websocket.http`](./websocket.h
 - Browsers usually block autoplay for audio streams. Playback starts after a direct user click on the `Play` button.
 - The track feed uses SockJS framing around STOMP messages. The parsing and subscription helpers live in [`radio.js`](./radio.js).
 - The UI logic lives in [`app.js`](./app.js), and the markup/styles live in [`index.html`](./index.html) and [`styles.css`](./styles.css).
+- [`scripts/build.mjs`](./scripts/build.mjs) copies the client files into `dist/` for deployment.
+- [`server.js`](./server.js) is the lightweight production server used by `npm start`.
 
 ## Project Layout
 
@@ -52,9 +94,13 @@ The websocket handshake details are captured in [`websocket.http`](./websocket.h
 .
 ├── app.js
 ├── index.html
+├── server.js
 ├── radio.js
+├── scripts/
+│   └── build.mjs
 ├── styles.css
 ├── tests/
 │   └── radio.test.js
+├── vercel.json
 └── websocket.http
 ```
