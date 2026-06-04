@@ -1,0 +1,5 @@
+WEBSOCKET wss://audioapi.net/api/v1/sockjs/291/rclfiblm/websocket
+Content-Type: application/json
+
+["SUBSCRIBE\nid:sub-0\ndestination:/topic/radios/wcd/tracks\n\n\u0000"]
+

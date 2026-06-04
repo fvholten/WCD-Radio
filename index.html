@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>BCB Radio</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <main class="player">
+      <p class="station-label">WCD Radio</p>
+
+      <section class="track-card" aria-live="polite">
+        <div class="artwork-frame">
+          <img
+            id="artwork"
+            alt="Current track artwork"
+            hidden
+            referrerpolicy="no-referrer"
+          />
+          <div id="artwork-placeholder" class="artwork-placeholder">LIVE</div>
+        </div>
+
+        <div class="track-copy">
+          <p class="section-label">Now playing</p>
+          <h1 id="track-title">Waiting for track info</h1>
+          <p id="track-artist">Connecting to the track feed...</p>
+        </div>
+      </section>
+
+      <section class="controls" aria-label="Player controls">
+        <button id="play-toggle" class="play-toggle" type="button">Play</button>
+
+        <label class="volume-control" for="volume">
+          <span>Volume</span>
+          <input id="volume" type="range" min="0" max="100" value="70" />
+        </label>
+      </section>
+
+      <dl class="status-list">
+        <div>
+          <dt>Stream</dt>
+          <dd id="stream-status">Ready</dd>
+        </div>
+        <div>
+          <dt>Track feed</dt>
+          <dd id="feed-status">Connecting track feed...</dd>
+        </div>
+      </dl>
+
+      <audio id="stream" preload="none"></audio>
+    </main>
+
+    <script type="module" src="./app.js"></script>
+  </body>
+</html>
